@@ -77,7 +77,8 @@ def broadcast(connections: list, msg: Message) -> None:
 def debate_round(state: DebateState, connections: list) -> None:
     """Run one full round: each agent responds once."""
     for name, conn in connections:
-        context = state.build_context(agent_name=name)
+        opponent_name = next(n for n, _ in connections if n != name)
+        context = state.build_context(agent_name=name, opponent_name=opponent_name)
         prompt = Message(
             role="orchestrator", name="Orchestrator", content=context, signal=None
         )
@@ -114,7 +115,8 @@ def run_final_round(state: DebateState, connections: list) -> dict:
     results = {}
 
     for name, conn in connections:
-        context = state.build_context(agent_name=name)
+        opponent_name = next(n for n, _ in connections if n != name)
+        context = state.build_context(agent_name=name, opponent_name=opponent_name)
         msg = Message(
             role="orchestrator",
             name="Orchestrator",
