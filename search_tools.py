@@ -18,6 +18,23 @@ def search_web(query: str, max_results: int = 5) -> str:
         return "Search failed."
 
 
+def pre_search(topic: str) -> str:
+    """Run targeted searches before the debate starts. Returns a research brief."""
+    queries = [
+        f"{topic} price Israel 2025",
+        f"{topic} insurance cost Israel",
+        f"{topic} reliability rating",
+        f"best family car Israel 2025 recommendations",
+        f"{topic} fuel economy",
+        f"{topic} maintenance cost",
+    ]
+    sections = ["## RESEARCH BRIEF\n"]
+    for query in queries:
+        result = search_web(query, max_results=3)
+        sections.append(f"### {query}\n{result}\n")
+    return "\n".join(sections)
+
+
 SEARCH_TOOL_DEFINITION = {
     "name": "search_web",
     "description": (

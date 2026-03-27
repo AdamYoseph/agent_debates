@@ -42,3 +42,27 @@ def test_search_tool_definition_structure():
     assert SEARCH_TOOL_DEFINITION["parameters"]["type"] == "object"
     assert "query" in SEARCH_TOOL_DEFINITION["parameters"]["properties"]
     assert "query" in SEARCH_TOOL_DEFINITION["parameters"]["required"]
+
+
+def test_pre_search_returns_non_empty_string():
+    with patch("search_tools.search_web", return_value="some car data"):
+        from search_tools import pre_search
+        result = pre_search("best family SUV")
+
+    assert len(result) > 0
+    assert "RESEARCH BRIEF" in result
+
+
+def test_pre_search_includes_multiple_queries():
+    call_log = []
+
+    def fake_search(query, **kwargs):
+        call_log.append(query)
+        return "data"
+
+    with patch("search_tools.search_web", side_effect=fake_search):
+        from search_tools import pre_search
+        pre_search("Toyota RAV4")
+
+    assert len(call_log) >= 4
+    assert any("Israel" in q for q in call_log)
