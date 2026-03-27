@@ -8,6 +8,7 @@ from socket_utils import send_message, recv_message
 from debate import DebateState, DebatePhase
 from agent import parse_final_answer
 from search_tools import pre_search
+from logging_utils import setup_logging
 
 
 def format_final_results(results: dict) -> str:
@@ -105,8 +106,12 @@ def run_final_round(state: DebateState, connections: list) -> dict:
 
 
 def run_debate(topic: str) -> None:
+    logger = setup_logging("orchestrator")
+    logger.info(f"Debate topic: {topic}")
+
     print(f"\nResearching '{topic}'...")
     brief = pre_search(topic)
+    logger.info("Pre-search complete")
     state = DebateState(topic=topic, research_brief=brief)
 
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -115,9 +120,11 @@ def run_debate(topic: str) -> None:
     server_sock.listen(2)
 
     connections = collect_agents(server_sock)
+    logger.info(f"Agents connected: {[name for name, _ in connections]}")
     print(f"\n=== Debate starting: {topic} ===\n")
 
     while state.phase == DebatePhase.DEBATING:
+        logger.info(f"Round {state.round + 1}")
         debate_round(state, connections)
 
         if state.should_pause():
@@ -129,18 +136,23 @@ def run_debate(topic: str) -> None:
             choice = input("> ").strip()
 
             if choice.lower() == "q":
+                logger.info("User chose to wrap up")
                 break
             else:
+                logger.info(f"User question: {choice}")
                 state.add_message("User", choice)
                 state.reset_round_counter()
                 state.set_phase(DebatePhase.DEBATING)
 
     results = run_final_round(state, connections)
-    print(format_final_results(results))
+    final_output = format_final_results(results)
+    print(final_output)
+    logger.info(f"Final results: {results}")
 
     for _, conn in connections:
         conn.close()
     server_sock.close()
+    logger.info("Debate complete")
 
 
 if __name__ == "__main__":

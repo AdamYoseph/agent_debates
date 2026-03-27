@@ -1,5 +1,6 @@
 # agent.py
 import os
+import time
 import socket
 import argparse
 import re
@@ -9,8 +10,11 @@ from config import Config
 from protocol import Message, Signal
 from socket_utils import send_message, recv_message
 from search_tools import search_web, SEARCH_TOOL_DEFINITION
+from logging_utils import setup_logging
 
 MAX_TOOL_ITERATIONS = 5
+RATE_LIMIT_WAIT = 65  # seconds to wait on 429 (free tier is 5 req/min)
+MAX_RETRIES = 3
 
 
 def build_system_prompt(name: str) -> str:
@@ -35,7 +39,23 @@ CONSENSUS: yes/no
 Keep responses concise (3-5 sentences max) unless providing a FINAL_ANSWER."""
 
 
-def handle_tool_calls(response, chat) -> str:
+def _gemini_call(fn, *args, logger=None):
+    """Call a Gemini API function, retrying up to MAX_RETRIES times on 429 errors."""
+    for attempt in range(MAX_RETRIES):
+        try:
+            return fn(*args)
+        except Exception as e:
+            if "429" in str(e) and attempt < MAX_RETRIES - 1:
+                msg = f"Rate limit hit. Waiting {RATE_LIMIT_WAIT}s before retry ({attempt + 1}/{MAX_RETRIES - 1})..."
+                print(msg)
+                if logger:
+                    logger.warning(msg)
+                time.sleep(RATE_LIMIT_WAIT)
+            else:
+                raise
+
+
+def handle_tool_calls(response, chat, logger=None) -> str:
     """Execute any function calls in the response, feeding results back until plain text."""
     iteration = 0
     while response.function_calls and iteration < MAX_TOOL_ITERATIONS:
@@ -44,17 +64,25 @@ def handle_tool_calls(response, chat) -> str:
             if call.name == "search_web":
                 query = call.args.get("query", "")
                 max_results = call.args.get("max_results", 5)
+                if logger:
+                    logger.info(f"Tool call: search_web(query={query!r})")
                 result = search_web(query, max_results=max_results)
+                if logger:
+                    logger.debug(f"search_web result: {result[:200]}")
             else:
                 result = f"Unknown tool: {call.name}"
+                if logger:
+                    logger.warning(f"Unknown tool called: {call.name}")
             tool_results.append(
                 types.Part.from_function_response(
                     name=call.name,
                     response={"result": result},
                 )
             )
-        response = chat.send_message(tool_results)
+        response = _gemini_call(chat.send_message, tool_results, logger=logger)
         iteration += 1
+    if not response.text and logger:
+        logger.warning("Gemini returned empty text after tool call loop")
     return response.text or ""
 
 
@@ -71,8 +99,10 @@ def parse_final_answer(response: str) -> dict:
 
 
 def run_agent(name: str):
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    logger = setup_logging(f"agent-{name}")
+    logger.info(f"Agent {name} starting")
 
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     tool = types.Tool(function_declarations=[SEARCH_TOOL_DEFINITION])
 
     chat = client.chats.create(
@@ -87,6 +117,7 @@ def run_agent(name: str):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((Config.HOST, Config.PORT))
     print(f"[{name}] Connected to orchestrator.")
+    logger.info("Connected to orchestrator")
 
     registration = Message(role="agent", name=name, content="ready", signal=None)
     send_message(sock, registration)
@@ -96,24 +127,29 @@ def run_agent(name: str):
 
         if msg.signal == Signal.FINAL_ANSWER:
             print(f"\n[{name}] Generating final recommendation...")
+            logger.info("Received FINAL_ANSWER signal")
             user_message = msg.content + "\n\nProvide your FINAL_ANSWER now."
         else:
             print(f"\n[{name}] Received: {msg.content[:80]}...")
+            logger.info(f"Received message: {msg.content[:200]}")
             user_message = msg.content
 
         try:
-            response = chat.send_message(user_message)
-            reply = handle_tool_calls(response, chat)
+            response = _gemini_call(chat.send_message, user_message, logger=logger)
+            reply = handle_tool_calls(response, chat, logger=logger)
         except Exception as e:
             print(f"\n[{name}] ERROR calling Gemini API: {e}")
+            logger.error(f"Gemini API error: {e}")
             sock.close()
             raise
 
         print(f"\n[{name}] My response:\n{reply}\n")
+        logger.info(f"Response: {reply}")
 
         signal = None
         if reply.strip().startswith("[NEED_INFO]"):
             signal = Signal.NEED_INFO
+            logger.info("Emitting NEED_INFO signal")
 
         out = Message(role="agent", name=name, content=reply, signal=signal)
         send_message(sock, out)
@@ -122,6 +158,7 @@ def run_agent(name: str):
             break
 
     sock.close()
+    logger.info("Debate complete. Disconnecting.")
     print(f"[{name}] Debate complete. Disconnecting.")
 
 
