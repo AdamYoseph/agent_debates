@@ -51,7 +51,7 @@ def collect_agents(server_sock: socket.socket, count: int = 2) -> list:
     return connections
 
 
-def collect_debate_setup(connections: list) -> tuple:
+def collect_debate_setup(connections: list) -> tuple[dict, str]:
     """Prompt user for per-agent motivations and optional guidance."""
     print("\n=== Debate Setup ===")
     agent_motivations = {}

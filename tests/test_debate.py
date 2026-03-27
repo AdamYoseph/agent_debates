@@ -113,3 +113,29 @@ def test_build_context_omits_guidance_when_empty():
     state = DebateState(topic="Best family SUV")
     context = state.build_context()
     assert "DEBATE GUIDANCE" not in context
+
+
+def test_build_context_with_motivation_and_guidance_together():
+    state = DebateState(
+        topic="Best family SUV",
+        agent_motivations={"Alpha": "comfort focused"},
+        guidance="Budget max 200k ILS",
+    )
+    context = state.build_context(agent_name="Alpha")
+    assert "YOUR ROLE: comfort focused" in context
+    assert "DEBATE GUIDANCE" in context
+    assert "Budget max 200k ILS" in context
+    # Role must appear before guidance
+    assert context.index("YOUR ROLE") < context.index("DEBATE GUIDANCE")
+
+
+def test_build_context_no_agent_name_still_shows_guidance():
+    state = DebateState(
+        topic="Best family SUV",
+        agent_motivations={"Alpha": "comfort focused"},
+        guidance="Budget max 200k ILS",
+    )
+    context = state.build_context()
+    assert "YOUR ROLE" not in context
+    assert "DEBATE GUIDANCE" in context
+    assert "Budget max 200k ILS" in context
