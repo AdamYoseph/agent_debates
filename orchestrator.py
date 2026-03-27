@@ -51,6 +51,24 @@ def collect_agents(server_sock: socket.socket, count: int = 2) -> list:
     return connections
 
 
+def collect_debate_setup(connections: list) -> tuple:
+    """Prompt user for per-agent motivations and optional guidance."""
+    print("\n=== Debate Setup ===")
+    agent_motivations = {}
+    for name, _ in connections:
+        motivation = input(
+            f"{name}'s motivation? (e.g. 'comfort focused', leave blank to skip)\n> "
+        ).strip()
+        if motivation:
+            agent_motivations[name] = motivation
+
+    guidance = input(
+        "\nDebate guidance/constraints? (e.g. 'budget 150-250k ILS', leave blank to skip)\n> "
+    ).strip()
+
+    return agent_motivations, guidance
+
+
 def broadcast(connections: list, msg: Message) -> None:
     for _, conn in connections:
         send_message(conn, msg)
@@ -58,9 +76,8 @@ def broadcast(connections: list, msg: Message) -> None:
 
 def debate_round(state: DebateState, connections: list) -> None:
     """Run one full round: each agent responds once."""
-    context = state.build_context()
-
     for name, conn in connections:
+        context = state.build_context(agent_name=name)
         prompt = Message(
             role="orchestrator", name="Orchestrator", content=context, signal=None
         )
@@ -94,10 +111,10 @@ def debate_round(state: DebateState, connections: list) -> None:
 
 def run_final_round(state: DebateState, connections: list) -> dict:
     state.set_phase(DebatePhase.FINAL)
-    context = state.build_context()
     results = {}
 
     for name, conn in connections:
+        context = state.build_context(agent_name=name)
         msg = Message(
             role="orchestrator",
             name="Orchestrator",
@@ -119,7 +136,6 @@ def run_debate(topic: str) -> None:
     print(f"\nResearching '{topic}'...")
     brief = pre_search(topic)
     logger.info("Pre-search complete")
-    state = DebateState(topic=topic, research_brief=brief)
 
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -128,7 +144,16 @@ def run_debate(topic: str) -> None:
 
     connections = collect_agents(server_sock)
     logger.info(f"Agents connected: {[name for name, _ in connections]}")
+    agent_motivations, guidance = collect_debate_setup(connections)
+    logger.info(f"Motivations: {agent_motivations}, Guidance: {guidance!r}")
     print(f"\n=== Debate starting: {topic} ===\n")
+
+    state = DebateState(
+        topic=topic,
+        research_brief=brief,
+        agent_motivations=agent_motivations,
+        guidance=guidance,
+    )
 
     while state.phase == DebatePhase.DEBATING:
         logger.info(f"Round {state.round + 1}")
