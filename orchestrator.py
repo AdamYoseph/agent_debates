@@ -7,6 +7,7 @@ from protocol import Message, Signal
 from socket_utils import send_message, recv_message
 from debate import DebateState, DebatePhase
 from agent import parse_final_answer
+from search_tools import pre_search
 
 
 def format_final_results(results: dict) -> str:
@@ -104,7 +105,9 @@ def run_final_round(state: DebateState, connections: list) -> dict:
 
 
 def run_debate(topic: str) -> None:
-    state = DebateState(topic=topic)
+    print(f"\nResearching '{topic}'...")
+    brief = pre_search(topic)
+    state = DebateState(topic=topic, research_brief=brief)
 
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
