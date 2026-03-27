@@ -1,6 +1,5 @@
 # orchestrator.py
 import socket
-import threading
 import argparse
 from config import Config
 from protocol import Message, Signal
@@ -12,9 +11,8 @@ from logging_utils import setup_logging
 
 
 def format_final_results(results: dict) -> str:
-    all_agree = (
-        len(set(r["recommendation"] for r in results.values())) == 1
-        and all(r["consensus"] for r in results.values())
+    all_agree = len(set(r["recommendation"] for r in results.values())) == 1 and all(
+        r["consensus"] for r in results.values()
     )
     lines = ["\n" + "=" * 60, "FINAL RECOMMENDATIONS", "=" * 60]
 
@@ -63,7 +61,9 @@ def debate_round(state: DebateState, connections: list) -> None:
     context = state.build_context()
 
     for name, conn in connections:
-        prompt = Message(role="orchestrator", name="Orchestrator", content=context, signal=None)
+        prompt = Message(
+            role="orchestrator", name="Orchestrator", content=context, signal=None
+        )
         send_message(conn, prompt)
 
         reply = recv_message(conn)
@@ -77,9 +77,12 @@ def debate_round(state: DebateState, connections: list) -> None:
             user_answer = input("> ").strip()
             state.add_user_info(f"Re: {name}'s question — {user_answer}")
             # Acknowledge and continue
-            ack = Message(role="orchestrator", name="Orchestrator",
-                         content=f"User provided: {user_answer}. Please continue your argument.",
-                         signal=None)
+            ack = Message(
+                role="orchestrator",
+                name="Orchestrator",
+                content=f"User provided: {user_answer}. Please continue your argument.",
+                signal=None,
+            )
             send_message(conn, ack)
             reply = recv_message(conn)
             print(f"\n--- {reply.name} (continued) ---\n{reply.content}\n")
@@ -95,8 +98,12 @@ def run_final_round(state: DebateState, connections: list) -> dict:
     results = {}
 
     for name, conn in connections:
-        msg = Message(role="orchestrator", name="Orchestrator",
-                     content=context, signal=Signal.FINAL_ANSWER)
+        msg = Message(
+            role="orchestrator",
+            name="Orchestrator",
+            content=context,
+            signal=Signal.FINAL_ANSWER,
+        )
         send_message(conn, msg)
         reply = recv_message(conn)
         print(f"\n--- {reply.name} FINAL ---\n{reply.content}\n")
@@ -157,7 +164,9 @@ def run_debate(topic: str) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Agent Debates Orchestrator")
-    parser.add_argument("--topic", type=str, default="", help="Debate topic (prompted if omitted)")
+    parser.add_argument(
+        "--topic", type=str, default="", help="Debate topic (prompted if omitted)"
+    )
     args = parser.parse_args()
 
     topic = get_topic(args)

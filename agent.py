@@ -94,7 +94,9 @@ def parse_final_answer(response: str) -> dict:
     return {
         "recommendation": rec_match.group(1).strip() if rec_match else "",
         "reason": reason_match.group(1).strip() if reason_match else "",
-        "consensus": consensus_match.group(1).lower() == "yes" if consensus_match else False,
+        "consensus": consensus_match.group(1).lower() == "yes"
+        if consensus_match
+        else False,
     }
 
 

@@ -1,18 +1,23 @@
 # tests/test_agent.py
-import pytest
-from agent import build_system_prompt, parse_final_answer
+from unittest.mock import MagicMock, patch
+
+from agent import build_system_prompt, handle_tool_calls, parse_final_answer
+
 
 def test_system_prompt_contains_name():
     prompt = build_system_prompt("Alpha")
     assert "Alpha" in prompt
 
+
 def test_system_prompt_mentions_need_info():
     prompt = build_system_prompt("Beta")
     assert "NEED_INFO" in prompt
 
+
 def test_system_prompt_mentions_final_answer():
     prompt = build_system_prompt("Alpha")
     assert "FINAL_ANSWER" in prompt
+
 
 def test_parse_final_answer_consensus():
     response = """
@@ -24,6 +29,7 @@ CONSENSUS: yes
     assert result["recommendation"] == "Honda CR-V"
     assert result["consensus"] is True
 
+
 def test_parse_final_answer_no_consensus():
     response = """
 RECOMMENDATION: Toyota RAV4
@@ -33,10 +39,6 @@ CONSENSUS: no
     result = parse_final_answer(response)
     assert result["recommendation"] == "Toyota RAV4"
     assert result["consensus"] is False
-
-
-from unittest.mock import MagicMock, patch
-from agent import handle_tool_calls
 
 
 def test_handle_tool_calls_no_function_calls():

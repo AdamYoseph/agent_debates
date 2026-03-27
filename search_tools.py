@@ -24,7 +24,7 @@ def pre_search(topic: str) -> str:
         f"{topic} price Israel 2025",
         f"{topic} insurance cost Israel",
         f"{topic} reliability rating",
-        f"best family car Israel 2025 recommendations",
+        "best family car Israel 2025 recommendations",
         f"{topic} fuel economy",
         f"{topic} maintenance cost",
     ]
