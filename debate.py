@@ -49,8 +49,26 @@ class DebateState:
     ) -> str:
         """Build a conversation context string for agents."""
         lines = []
+        # 1. YOUR ROLE (if motivation set)
         if agent_name and self.agent_motivations.get(agent_name):
             lines.append(f"YOUR ROLE: {self.agent_motivations[agent_name]}\n")
+        # 2. RESPOND TO (before TOPIC, so agent reads directive first)
+        if opponent_name:
+            opponent_msg = next(
+                (
+                    e["content"]
+                    for e in reversed(self.history)
+                    if e["name"] == opponent_name
+                ),
+                None,
+            )
+            if opponent_msg:
+                lines.append(
+                    f"RESPOND TO {opponent_name}'s latest argument:\n"
+                    f"{opponent_msg}\n"
+                    f"Address {opponent_name} directly by name in your response.\n"
+                )
+        # 3. Everything else
         lines.append(f"TOPIC: {self.topic}")
         if self.research_brief:
             lines.append(f"\nRESEARCH BRIEF:\n{self.research_brief}")
@@ -63,19 +81,4 @@ class DebateState:
         lines.append("\nDEBATE HISTORY:")
         for entry in self.history:
             lines.append(f"  {entry['name']}: {entry['content']}")
-        if opponent_name:
-            opponent_msg = next(
-                (
-                    e["content"]
-                    for e in reversed(self.history)
-                    if e["name"] == opponent_name
-                ),
-                None,
-            )
-            if opponent_msg:
-                lines.append(
-                    f"\nRESPOND TO {opponent_name}'s latest argument:\n"
-                    f"{opponent_msg}\n"
-                    f"Address {opponent_name} directly by name in your response.\n"
-                )
         return "\n".join(lines)

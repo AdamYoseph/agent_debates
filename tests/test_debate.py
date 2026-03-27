@@ -161,8 +161,19 @@ def test_build_context_respond_to_uses_most_recent_opponent_message():
 
     context = state.build_context(agent_name="Beta", opponent_name="Alpha")
 
-    assert "Second argument" in context
-    assert "First argument" not in context.split("RESPOND TO")[1]
+    # Extract just the RESPOND TO section (between "RESPOND TO" and "TOPIC:")
+    respond_to_section = context.split("RESPOND TO")[1].split("TOPIC:")[0]
+    assert "Second argument" in respond_to_section
+    assert "First argument" not in respond_to_section
+
+
+def test_build_context_respond_to_appears_before_topic():
+    state = DebateState(topic="Best family SUV")
+    state.add_message("Alpha", "I think the Tucson is best.")
+
+    context = state.build_context(agent_name="Beta", opponent_name="Alpha")
+
+    assert context.index("RESPOND TO") < context.index("TOPIC:")
 
 
 def test_build_context_no_respond_to_when_no_opponent_history():
