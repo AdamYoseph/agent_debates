@@ -21,6 +21,8 @@ class DebateState:
     history: List[dict] = field(default_factory=list)
     user_info: List[str] = field(default_factory=list)
     research_brief: str = ""
+    agent_motivations: dict = field(default_factory=dict)
+    guidance: str = ""
 
     def add_message(self, name: str, content: str) -> None:
         self.history.append({"name": name, "content": content})
@@ -40,11 +42,16 @@ class DebateState:
     def reset_round_counter(self) -> None:
         self.round = 0
 
-    def build_context(self) -> str:
+    def build_context(self, agent_name: str = None) -> str:
         """Build a conversation context string for agents."""
-        lines = [f"TOPIC: {self.topic}"]
+        lines = []
+        if agent_name and agent_name in self.agent_motivations:
+            lines.append(f"YOUR ROLE: {self.agent_motivations[agent_name]}\n")
+        lines.append(f"TOPIC: {self.topic}")
         if self.research_brief:
             lines.append(f"\nRESEARCH BRIEF:\n{self.research_brief}")
+        if self.guidance:
+            lines.append(f"\nDEBATE GUIDANCE:\n{self.guidance}")
         if self.user_info:
             lines.append("\nUSER INFO PROVIDED:")
             for info in self.user_info:
