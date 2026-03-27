@@ -139,3 +139,43 @@ def test_build_context_no_agent_name_still_shows_guidance():
     assert "YOUR ROLE" not in context
     assert "DEBATE GUIDANCE" in context
     assert "Budget max 200k ILS" in context
+
+
+def test_build_context_respond_to_opponent_latest_message():
+    state = DebateState(topic="Best family SUV")
+    state.add_message("Alpha", "I think the Tucson is best.")
+    state.add_message("Beta", "The RAV4 beats it on reliability.")
+    state.add_message("Alpha", "But Tucson has better warranty coverage.")
+
+    context = state.build_context(agent_name="Beta", opponent_name="Alpha")
+
+    assert "RESPOND TO Alpha" in context
+    assert "Tucson has better warranty coverage" in context
+
+
+def test_build_context_respond_to_uses_most_recent_opponent_message():
+    state = DebateState(topic="Best family SUV")
+    state.add_message("Alpha", "First argument.")
+    state.add_message("Beta", "Counter.")
+    state.add_message("Alpha", "Second argument.")
+
+    context = state.build_context(agent_name="Beta", opponent_name="Alpha")
+
+    assert "Second argument" in context
+    assert "First argument" not in context.split("RESPOND TO")[1]
+
+
+def test_build_context_no_respond_to_when_no_opponent_history():
+    state = DebateState(topic="Best family SUV")
+    context = state.build_context(agent_name="Beta", opponent_name="Alpha")
+
+    assert "RESPOND TO" not in context
+
+
+def test_build_context_no_respond_to_without_opponent_name():
+    state = DebateState(topic="Best family SUV")
+    state.add_message("Alpha", "I think the Tucson is best.")
+
+    context = state.build_context(agent_name="Beta")
+
+    assert "RESPOND TO" not in context

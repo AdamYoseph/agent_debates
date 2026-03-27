@@ -42,7 +42,11 @@ class DebateState:
     def reset_round_counter(self) -> None:
         self.round = 0
 
-    def build_context(self, agent_name: str | None = None) -> str:
+    def build_context(
+        self,
+        agent_name: str | None = None,
+        opponent_name: str | None = None,
+    ) -> str:
         """Build a conversation context string for agents."""
         lines = []
         if agent_name and self.agent_motivations.get(agent_name):
@@ -59,4 +63,19 @@ class DebateState:
         lines.append("\nDEBATE HISTORY:")
         for entry in self.history:
             lines.append(f"  {entry['name']}: {entry['content']}")
+        if opponent_name:
+            opponent_msg = next(
+                (
+                    e["content"]
+                    for e in reversed(self.history)
+                    if e["name"] == opponent_name
+                ),
+                None,
+            )
+            if opponent_msg:
+                lines.append(
+                    f"\nRESPOND TO {opponent_name}'s latest argument:\n"
+                    f"{opponent_msg}\n"
+                    f"Address {opponent_name} directly by name in your response.\n"
+                )
         return "\n".join(lines)
