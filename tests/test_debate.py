@@ -39,3 +39,21 @@ def test_add_user_info():
     state = DebateState(topic="Best family SUV")
     state.add_user_info("Family of 4, budget $40k")
     assert "Family of 4" in state.user_info[0]
+
+
+def test_research_brief_default_empty():
+    state = DebateState(topic="Best family SUV")
+    assert state.research_brief == ""
+
+
+def test_build_context_includes_research_brief():
+    state = DebateState(topic="Best family SUV", research_brief="Toyota costs $30k")
+    context = state.build_context()
+    assert "Toyota costs $30k" in context
+    assert "RESEARCH BRIEF" in context
+
+
+def test_build_context_omits_brief_when_empty():
+    state = DebateState(topic="Best family SUV")
+    context = state.build_context()
+    assert "RESEARCH BRIEF" not in context
