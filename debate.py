@@ -42,10 +42,10 @@ class DebateState:
     def reset_round_counter(self) -> None:
         self.round = 0
 
-    def build_context(self, agent_name: str = None) -> str:
+    def build_context(self, agent_name: str | None = None) -> str:
         """Build a conversation context string for agents."""
         lines = []
-        if agent_name and agent_name in self.agent_motivations:
+        if agent_name and self.agent_motivations.get(agent_name):
             lines.append(f"YOUR ROLE: {self.agent_motivations[agent_name]}\n")
         lines.append(f"TOPIC: {self.topic}")
         if self.research_brief:
