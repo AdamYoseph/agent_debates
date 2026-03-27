@@ -38,4 +38,7 @@ def test_search_web_handles_exception():
 
 def test_search_tool_definition_structure():
     assert SEARCH_TOOL_DEFINITION["name"] == "search_web"
+    assert "description" in SEARCH_TOOL_DEFINITION
+    assert SEARCH_TOOL_DEFINITION["parameters"]["type"] == "object"
     assert "query" in SEARCH_TOOL_DEFINITION["parameters"]["properties"]
+    assert "query" in SEARCH_TOOL_DEFINITION["parameters"]["required"]

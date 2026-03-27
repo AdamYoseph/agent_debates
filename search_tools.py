@@ -13,7 +13,8 @@ def search_web(query: str, max_results: int = 5) -> str:
         for r in results:
             lines.append(f"{r['title']} | {r['body']} | {r['href']}")
         return "\n".join(lines)
-    except Exception:
+    except Exception as e:
+        print(f"[search_web] Search failed: {e}")
         return "Search failed."
 
 
