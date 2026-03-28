@@ -42,18 +42,38 @@ CONSENSUS: yes/no
 Keep responses concise (3-5 sentences max) unless providing a FINAL_ANSWER."""
 
 
+class DailyQuotaExceededError(Exception):
+    """Raised when the Gemini daily request quota is exhausted."""
+
+
+def _is_daily_quota_error(e: Exception) -> bool:
+    err_str = str(e)
+    return "429" in err_str and "PerDay" in err_str
+
+
 def _gemini_call(fn, *args, logger=None):
-    """Call a Gemini API function, retrying up to MAX_RETRIES times on 429 errors."""
+    """Call a Gemini API function, retrying up to MAX_RETRIES times on per-minute 429 errors.
+
+    Raises DailyQuotaExceededError immediately (no retry) when the daily quota is hit.
+    """
     for attempt in range(MAX_RETRIES):
         try:
             return fn(*args)
         except Exception as e:
-            if "429" in str(e) and attempt < MAX_RETRIES - 1:
-                msg = f"Rate limit hit. Waiting {RATE_LIMIT_WAIT}s before retry ({attempt + 1}/{MAX_RETRIES - 1})..."
-                print(msg)
-                if logger:
-                    logger.warning(msg)
-                time.sleep(RATE_LIMIT_WAIT)
+            if "429" in str(e):
+                if _is_daily_quota_error(e):
+                    msg = "Daily API quota exhausted. Cannot retry until tomorrow or billing is upgraded."
+                    if logger:
+                        logger.error(msg)
+                    raise DailyQuotaExceededError(msg) from e
+                if attempt < MAX_RETRIES - 1:
+                    msg = f"Rate limit hit. Waiting {RATE_LIMIT_WAIT}s before retry ({attempt + 1}/{MAX_RETRIES - 1})..."
+                    print(msg)
+                    if logger:
+                        logger.warning(msg)
+                    time.sleep(RATE_LIMIT_WAIT)
+                else:
+                    raise
             else:
                 raise
 
@@ -142,6 +162,24 @@ def run_agent(name: str):
         try:
             response = _gemini_call(chat.send_message, user_message, logger=logger)
             reply = handle_tool_calls(response, chat, logger=logger)
+        except DailyQuotaExceededError as e:
+            logger.error(f"Gemini API error: {e}")
+            if msg.signal == Signal.FINAL_ANSWER:
+                # Send a graceful fallback so the orchestrator can still display results
+                fallback = (
+                    "RECOMMENDATION: Unable to generate — daily API quota exhausted\n"
+                    "REASON: The free-tier Gemini API limit (20 requests/day) was reached before "
+                    "the final answer could be generated. Upgrade billing or retry tomorrow.\n"
+                    "CONSENSUS: no"
+                )
+                print(f"\n[{name}] Daily quota hit. Sending fallback final answer.")
+                out = Message(role="agent", name=name, content=fallback, signal=None)
+                send_message(sock, out)
+                sock.close()
+                return
+            print(f"\n[{name}] Daily quota exhausted: {e}")
+            sock.close()
+            raise
         except Exception as e:
             print(f"\n[{name}] ERROR calling Gemini API: {e}")
             logger.error(f"Gemini API error: {e}")
