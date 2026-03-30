@@ -14,7 +14,8 @@ from logging_utils import setup_logging
 
 MAX_TOOL_ITERATIONS = 5
 RATE_LIMIT_WAIT = 65  # fallback wait for per-minute quota (seconds)
-DAILY_QUOTA_WAIT = 3600  # fallback wait for daily quota (seconds)
+DAILY_QUOTA_WAIT = 300  # fallback wait for daily quota (seconds)
+NETWORK_ERROR_WAIT = 30  # wait before retrying transient network errors (seconds)
 
 
 def build_system_prompt(name: str) -> str:
@@ -58,6 +59,14 @@ def _gemini_call(fn, *args, logger=None):
     while True:
         try:
             return fn(*args)
+        except OSError as e:
+            # Transient network error (DNS failure, connection reset, etc.)
+            attempt += 1
+            msg = f"Network error: {e}. Waiting {NETWORK_ERROR_WAIT}s before retry (attempt {attempt})..."
+            print(msg)
+            if logger:
+                logger.warning(msg)
+            time.sleep(NETWORK_ERROR_WAIT)
         except Exception as e:
             err_str = str(e)
             if "429" not in err_str:
