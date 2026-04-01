@@ -1,5 +1,6 @@
 # main.py
 import sys
+import threading
 from queue import Queue
 from threading import Event, Thread
 
@@ -12,7 +13,8 @@ def _run_with_shutdown(fn, args, queues: list[Queue], error_event: Event) -> Non
     try:
         fn(*args)
     except Exception as e:
-        print(f"\n[ERROR] Thread {fn.__name__} failed: {e}", file=sys.stderr)
+        thread_name = threading.current_thread().name
+        print(f"\n[ERROR] Thread {thread_name} failed: {e}", file=sys.stderr)
         error_event.set()
         for q in queues:
             q.put(None)  # unblock any thread blocked on q.get()

@@ -172,6 +172,9 @@ def run_agent(name: str, inbox: Queue, outbox: Queue) -> None:
 
     while True:
         msg = inbox.get()
+        if msg is None:
+            logger.info("Shutdown signal received. Exiting.")
+            return
 
         if msg.signal == Signal.FINAL_ANSWER:
             print(f"\n[{name}] Generating final recommendation...")

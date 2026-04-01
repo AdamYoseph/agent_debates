@@ -84,6 +84,8 @@ def debate_round(state: DebateState, connections: list) -> None:
         inbox.put(prompt)
 
         reply = outbox.get()
+        if reply is None:
+            return
         print(f"\n--- {reply.name} ---\n{reply.content}\n")
 
         if reply.signal == Signal.NEED_INFO:
@@ -100,6 +102,8 @@ def debate_round(state: DebateState, connections: list) -> None:
             )
             inbox.put(ack)
             reply = outbox.get()
+            if reply is None:
+                return
             print(f"\n--- {reply.name} (continued) ---\n{reply.content}\n")
 
         state.add_message(reply.name, reply.content)
@@ -122,6 +126,8 @@ def run_final_round(state: DebateState, connections: list) -> dict:
         )
         inbox.put(msg)
         reply = outbox.get()
+        if reply is None:
+            return results
         print(f"\n--- {reply.name} FINAL ---\n{reply.content}\n")
         results[name] = parse_final_answer(reply.content)
 
