@@ -77,6 +77,16 @@ def test_handle_tool_calls_executes_search():
     mock_chat.send_message.assert_called_once()
 
 
+def test_system_prompt_requires_multiple_options():
+    prompt = build_system_prompt("Alpha")
+    assert "3 specific options" in prompt or "at least 3" in prompt
+
+
+def test_system_prompt_instructs_address_opponent_options():
+    prompt = build_system_prompt("Alpha")
+    assert "opponent" in prompt.lower() or "named options" in prompt.lower()
+
+
 def test_handle_tool_calls_caps_iterations():
     # Response always has a function call — should stop after MAX_TOOL_ITERATIONS
     call = MagicMock()
