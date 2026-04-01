@@ -27,6 +27,26 @@ def format_final_results(results: dict) -> str:
             lines.append(f"    Reason: {rec['reason']}\n")
         lines.append("The final decision is yours!")
 
+    # Consolidated runner-ups: merge, deduplicate, exclude winner(s), cap at 10
+    winner_names = {r["recommendation"].lower() for r in results.values()}
+    seen: set[str] = set()
+    runner_ups: list[dict] = []
+    for rec in results.values():
+        for ru in rec.get("runner_ups", []):
+            key = ru["name"].lower()
+            if key not in seen and key not in winner_names:
+                seen.add(key)
+                runner_ups.append(ru)
+            if len(runner_ups) >= 10:
+                break
+        if len(runner_ups) >= 10:
+            break
+
+    if runner_ups:
+        lines.append("\nWhy not the others:")
+        for ru in runner_ups:
+            lines.append(f"  • {ru['name']} — {ru['reason']}")
+
     lines.append("=" * 60)
     return "\n".join(lines)
 
