@@ -130,3 +130,17 @@ CONSENSUS: yes
 """
     result = parse_final_answer(response)
     assert result["runner_ups"] == []
+
+
+def test_parse_final_answer_runner_ups_ascii_hyphen():
+    """LLMs sometimes output ASCII hyphen instead of em-dash — both should parse."""
+    response = """
+RECOMMENDATION: Honda CR-V
+REASON: Great reliability.
+CONSENSUS: yes
+RUNNER_UP: Toyota RAV4 - Good but pricier
+RUNNER_UP: Kia Sorento - Higher insurance
+"""
+    result = parse_final_answer(response)
+    assert len(result["runner_ups"]) == 2
+    assert result["runner_ups"][0]["name"] == "Toyota RAV4"

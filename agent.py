@@ -139,7 +139,7 @@ def parse_final_answer(response: str) -> dict:
     rec_match = re.search(r"RECOMMENDATION:\s*(.+)", response)
     reason_match = re.search(r"REASON:\s*(.+)", response)
     consensus_match = re.search(r"CONSENSUS:\s*(yes|no)", response, re.IGNORECASE)
-    runner_up_matches = re.findall(r"RUNNER_UP:\s*(.+?)\s*—\s*(.+)", response)
+    runner_up_matches = re.findall(r"RUNNER_UP:\s*(.+?)\s*(?:—|-)\s*(.+)", response)
 
     return {
         "recommendation": rec_match.group(1).strip() if rec_match else "",
