@@ -1,14 +1,12 @@
 # agent.py
 import os
 import time
-import socket
-import argparse
 import re
+from queue import Queue
 from google import genai
 from google.genai import types
 from config import Config
 from protocol import Message, Signal
-from socket_utils import send_message, recv_message
 from search_tools import search_web, SEARCH_TOOL_DEFINITION
 from logging_utils import setup_logging
 
@@ -153,7 +151,7 @@ def parse_final_answer(response: str) -> dict:
     }
 
 
-def run_agent(name: str):
+def run_agent(name: str, inbox: Queue, outbox: Queue) -> None:
     logger = setup_logging(f"agent-{name}")
     logger.info(f"Agent {name} starting")
 
@@ -169,16 +167,11 @@ def run_agent(name: str):
         ),
     )
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((Config.HOST, Config.PORT))
-    print(f"[{name}] Connected to orchestrator.")
-    logger.info("Connected to orchestrator")
-
-    registration = Message(role="agent", name=name, content="ready", signal=None)
-    send_message(sock, registration)
+    print(f"[{name}] Ready.")
+    logger.info("Ready")
 
     while True:
-        msg = recv_message(sock)
+        msg = inbox.get()
 
         if msg.signal == Signal.FINAL_ANSWER:
             print(f"\n[{name}] Generating final recommendation...")
@@ -195,7 +188,6 @@ def run_agent(name: str):
         except Exception as e:
             print(f"\n[{name}] ERROR calling Gemini API: {e}")
             logger.error(f"Gemini API error: {e}")
-            sock.close()
             raise
 
         print(f"\n[{name}] My response:\n{reply}\n")
@@ -207,18 +199,10 @@ def run_agent(name: str):
             logger.info("Emitting NEED_INFO signal")
 
         out = Message(role="agent", name=name, content=reply, signal=signal)
-        send_message(sock, out)
+        outbox.put(out)
 
         if msg.signal == Signal.FINAL_ANSWER:
             break
 
-    sock.close()
-    logger.info("Debate complete. Disconnecting.")
-    print(f"[{name}] Debate complete. Disconnecting.")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--name", required=True, help="Agent name (e.g. Alpha or Beta)")
-    args = parser.parse_args()
-    run_agent(args.name)
+    logger.info("Debate complete.")
+    print(f"[{name}] Debate complete.")
