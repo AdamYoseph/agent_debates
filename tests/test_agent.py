@@ -105,3 +105,28 @@ def test_handle_tool_calls_caps_iterations():
 
     assert mock_chat.send_message.call_count <= 5
     assert result == "partial"
+
+
+def test_parse_final_answer_with_runner_ups():
+    response = """
+RECOMMENDATION: Toyota RAV4 Hybrid
+REASON: Best balance of reliability and running costs.
+CONSENSUS: yes
+RUNNER_UP: Kia Sorento — Higher insurance costs in Israel
+RUNNER_UP: Skoda Kodiaq 2024 — Over budget when new
+RUNNER_UP: Jaecoo J7 — Uncertain resale value
+"""
+    result = parse_final_answer(response)
+    assert len(result["runner_ups"]) == 3
+    assert result["runner_ups"][0]["name"] == "Kia Sorento"
+    assert result["runner_ups"][0]["reason"] == "Higher insurance costs in Israel"
+
+
+def test_parse_final_answer_no_runner_ups():
+    response = """
+RECOMMENDATION: Honda CR-V
+REASON: Great reliability.
+CONSENSUS: yes
+"""
+    result = parse_final_answer(response)
+    assert result["runner_ups"] == []

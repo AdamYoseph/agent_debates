@@ -48,9 +48,14 @@ Never use [NEED_INFO] to ask about the debate, the opponent, or their arguments.
 2. How many people are in your family?
 
 When the orchestrator sends signal FINAL_ANSWER, respond ONLY in this exact format:
-RECOMMENDATION: <Car make and model>
+RECOMMENDATION: <specific make/model/product>
 REASON: <2-3 sentences explaining why>
 CONSENSUS: yes/no
+RUNNER_UP: <option name> — <one sentence why not chosen>
+RUNNER_UP: <option name> — <one sentence why not chosen>
+RUNNER_UP: <option name> — <one sentence why not chosen>
+RUNNER_UP: <option name> — <one sentence why not chosen>
+RUNNER_UP: <option name> — <one sentence why not chosen>
 
 Keep responses concise (3-5 sentences max) unless providing a FINAL_ANSWER."""
 
@@ -134,13 +139,17 @@ def parse_final_answer(response: str) -> dict:
     rec_match = re.search(r"RECOMMENDATION:\s*(.+)", response)
     reason_match = re.search(r"REASON:\s*(.+)", response)
     consensus_match = re.search(r"CONSENSUS:\s*(yes|no)", response, re.IGNORECASE)
+    runner_up_matches = re.findall(r"RUNNER_UP:\s*(.+?)\s*—\s*(.+)", response)
 
     return {
         "recommendation": rec_match.group(1).strip() if rec_match else "",
         "reason": reason_match.group(1).strip() if reason_match else "",
-        "consensus": consensus_match.group(1).lower() == "yes"
-        if consensus_match
-        else False,
+        "consensus": (
+            consensus_match.group(1).lower() == "yes" if consensus_match else False
+        ),
+        "runner_ups": [
+            {"name": m[0].strip(), "reason": m[1].strip()} for m in runner_up_matches
+        ],
     }
 
 
