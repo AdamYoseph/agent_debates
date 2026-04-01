@@ -127,3 +127,29 @@ def test_existing_tests_still_pass_without_runner_ups_key():
     }
     output = format_final_results(results)
     assert "Honda CR-V" in output
+
+
+def test_runner_ups_capped_at_ten():
+    # Supply 15 unique runner-ups across two agents; only 10 should appear
+    alpha_runners = [
+        {"name": f"Option {i}", "reason": f"Reason {i}"} for i in range(1, 11)
+    ]
+    beta_runners = [
+        {"name": f"Option {i}", "reason": f"Reason {i}"} for i in range(11, 16)
+    ]
+    results = {
+        "Alpha": {
+            "recommendation": "Winner",
+            "reason": "Best.",
+            "consensus": True,
+            "runner_ups": alpha_runners,
+        },
+        "Beta": {
+            "recommendation": "Winner",
+            "reason": "Best.",
+            "consensus": True,
+            "runner_ups": beta_runners,
+        },
+    }
+    output = format_final_results(results)
+    assert output.count("•") == 10

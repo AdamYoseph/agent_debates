@@ -37,8 +37,8 @@ def format_final_results(results: dict) -> str:
             if key not in seen and key not in winner_names:
                 seen.add(key)
                 runner_ups.append(ru)
-            if len(runner_ups) >= 10:
-                break
+                if len(runner_ups) >= 10:
+                    break
         if len(runner_ups) >= 10:
             break
 
