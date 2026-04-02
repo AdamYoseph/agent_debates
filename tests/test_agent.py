@@ -41,6 +41,20 @@ CONSENSUS: no
     assert result["consensus"] is False
 
 
+def test_parse_final_answer_multiline_reason():
+    response = """RECOMMENDATION: Honda CR-V
+REASON: Great reliability and space for families. Insurance rates are low in Israel.
+Second sentence continues here.
+CONSENSUS: yes
+RUNNER_UP: Toyota RAV4 — Good but pricier
+"""
+    result = parse_final_answer(response)
+    assert "Insurance rates are low" in result["reason"]
+    assert "Second sentence" in result["reason"]
+    assert result["consensus"] is True
+    assert len(result["runner_ups"]) == 1
+
+
 def test_handle_tool_calls_no_function_calls():
     mock_response = MagicMock()
     mock_response.function_calls = []
